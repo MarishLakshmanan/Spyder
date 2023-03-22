@@ -22,10 +22,14 @@ def checkTheSite():
 @app.route("/check",methods=["POST"])
 @cross_origin()
 def check():
-    name = request.get_json()['name']
-    url = request.get_json()['url']
+    
+    name = request.get_json()['main']['username']
+    url = request.get_json()['main']['url']
+    auth = request.get_json()['authDetails']
+    isAuth = request.get_json()['check']['auth']
+    print(request.get_json())
     if(not url==""):
-        checker.checkTheSite(url,name)
+        checker.checkTheSite(url,name,isAuth,auth)
     res = os.walk(f'screenshots/{name}/')
     files = {}
     for folder,sub_folder,file in res:
@@ -42,7 +46,6 @@ def check():
 @app.route("/img/screenshots/<username>/<foldername>/<filename>",methods=["GET"])
 @cross_origin()
 def serve_image(username,foldername,filename):
-     print(username,foldername,filename)
      return send_file(f"screenshots/{username}/{foldername}/{filename}")
      
 

@@ -1,4 +1,4 @@
-import requests
+import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from datetime import datetime
@@ -36,9 +36,11 @@ class Checker():
 
             self.driver.execute_script("elem = document.createElement('div');elem.innerHTML='<h4>"+msg+"</h4>';elem.style.cssText = 'position:absolute;top:0;left:0;background-color:rgba(0,0,0,.6);width:100%;height:100vh;color:white;display:flex;justify-content:center;align-items:center;z-index:7189237918;font-family:sans-serif;';document.getElementsByTagName('body')[0].appendChild(elem);")
             print("logError: "+url)
-            name =str(datetime.now().timestamp())
-            print(f'screenshots/{self.start}/{self.name}/{name}logError.png')
-            self.driver.save_screenshot(f'screenshots/{self.name}/{self.start}/{name}logError.png')
+            filename =str(datetime.now().timestamp())
+            # print(f'screenshots/{self.start}/{self.name}/{name}logError.png')
+            if(not os.path.exists(f'screenshots/{self.name}/{self.start}')):
+                os.mkdir(f'screenshots/{self.name}/{self.start}')
+            self.driver.save_screenshot(f'screenshots/{self.name}/{self.start}/{filename}logError.png')
 
     def isVisited(self,url):
         for link in self.visited:
@@ -88,12 +90,19 @@ class Checker():
                 print(e)
             if(self.isVisited(url=url)):
                 continue  
-            res = requests.get(url)
+            # res = requests.get(url)
+            goodTogo = True
+            try:
+                self.driver.get(url)
+            except Exception as e:
+                print(e)
+                goodTogo = False
             self.visited.append(url)
             # print(f'{url} status :{res.status_code}')
-            if(res.status_code==200):
+            # res.status.code==200
+            if(goodTogo==True):
                 self.first =False
-                soup = BeautifulSoup(res.text,'html.parser')
+                soup = BeautifulSoup(self.driver.page_source,'html.parser')
                 anchorTags = soup.find_all('a')
                 errorElem = self.checkLink(anchorTags,url)
                 if(errorElem):
@@ -103,14 +112,28 @@ class Checker():
                     self.driver.execute_script(f'''document.querySelectorAll("a[href='{href}']")[0].style.border="5px solid red"''')
                     filename =str(datetime.now().timestamp())
                     # print(f'screenshots/{self.start}/{self.name}/{filename}logError.png')
+                    if(not os.path.exists(f'screenshots/{self.name}/{self.start}')):
+                        os.mkdir(f'screenshots/{self.name}/{self.start}')
                     self.driver.save_screenshot(f'screenshots/{self.name}/{self.start}/{filename}.png')
                     
                     
             else:
                 print("urlError: "+url)
                 return elem
+    def login(self,loginUrl,uselector,pselector,bselector,username,password,switchSelector):
+        self.driver.get(loginUrl)
+        if(not switchSelector==""):
+            self.driver.find_element_by_css_selector(switchSelector).click()
+        uelem = self.driver.find_element_by_css_selector(uselector)
+        pelem = self.driver.find_element_by_css_selector(pselector)
+        belem = self.driver.find_element_by_css_selector(bselector)
+        uelem.send_keys(username)
+        pelem.send_keys(password)
+        belem.click()
+        time.sleep(8)
+        
 
-    def checkTheSite(self,url,name):
+    def checkTheSite(self,url,name,isAuth,auth={}):
         self.url = url
         self.baseUrl = url
         self.name = name
@@ -118,16 +141,24 @@ class Checker():
         self.d['loggingPrefs'] = { 'browser':'ALL' }
         self.chrome_options = Options()
         self.chrome_options.add_argument('--no-sandbox')
-        self.reqs = requests.get(self.url)
-        self.soup = BeautifulSoup(self.reqs.text, 'html.parser')
-        self.anchorTags = self.soup.find_all('a')
-        self.driver = webdriver.Chrome(executable_path='./chromedriver',options=self.chrome_options,desired_capabilities=self.d)
-        self.start = str(datetime.now().timestamp()).split('.')[0]
+        self.driver = webdriver.Chrome(executable_path='./chromedriver',options=self.chrome_options,desired_capabilities=self.d) 
+
+        if(isAuth):
+            print("auth",auth)
+            self.login(auth['loginurl'],auth['uid'],auth['pid'],auth['bid'],auth['username'],auth['password'],auth['sid'])
+
+        # self.reqs = requests.get(self.url)
+        self.driver.get(self.url)
+        self.soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+        self.anchorTags = self.soup.find_all('a') 
+
+        self.start = f"{str(datetime.now().isoformat())} {url}".split(".")[0]
+        
         self.visited = []
         self.first = True
         if(not os.path.exists(f'screenshots/{name}')):
             os.mkdir(f'screenshots/{name}')
-        os.mkdir(f'screenshots/{name}/{self.start}')
+        # os.mkdir(f'screenshots/{name}/{self.start}')
         errorElem = self.checkLink(anchorTags=self.anchorTags, currentUrl=self.url)
         if(errorElem):
             
@@ -136,8 +167,12 @@ class Checker():
             self.driver.execute_script(f'''document.querySelectorAll("a[href='{href}']")[0].style.border="5px solid red"''')
             filename =str(datetime.now().timestamp())
             # print(f'screenshots/{self.start}/{self.name}/{filename}logError.png')
+            if(not os.path.exists(f'screenshots/{name}/{self.start}')):
+                os.mkdir(f'screenshots/{name}/{self.start}')
             self.driver.save_screenshot(f'screenshots/{name}/{self.start}/{filename}.png')
+        print("Visited ",self.visited)
         self.driver.quit()
+
 
 
 
